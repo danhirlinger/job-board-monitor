@@ -2,7 +2,7 @@ name: Job Board Monitor
 
 on:
   schedule:
-    # Run every 6 hours
+    # Run every day at 9 AM Central Time (3 PM UTC)
     - cron: '0 */6 * * *'
   workflow_dispatch:  # Allow manual triggers
 
@@ -37,9 +37,15 @@ jobs:
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
-        git add job_board_hash.txt
-        git diff --staged --quiet || git commit -m "Update job board hash [skip ci]"
-        git push
+        # Add hash file if it exists
+        if [ -f job_board_hash.txt ]; then
+          git add job_board_hash.txt
+          # Only commit if there are changes
+          if ! git diff --staged --quiet; then
+            git commit -m "Update job board hash [skip ci]"
+            git push
+          fi
+        fi
     
     - name: Send email notification on change
       if: steps.monitor.outcome == 'failure'
