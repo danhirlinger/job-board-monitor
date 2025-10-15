@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+
+# Hash file (will be cached by CI)
+job_board_hash.txt
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

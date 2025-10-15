@@ -1,0 +1,62 @@
+name: Job Board Monitor
+
+on:
+  schedule:
+    # Run every day at 9 AM Central Time (3 PM UTC)
+    - cron: '0 15 * * *'
+  workflow_dispatch:  # Allow manual triggers
+
+jobs:
+  check-job-board:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        # Need this to commit hash file back to repo
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        pip install requests
+    
+    - name: Check job board
+      id: monitor
+      run: |
+        python job_monitor.py
+      continue-on-error: true
+    
+    - name: Commit hash file if changed
+      if: always()
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add job_board_hash.txt
+        git diff --staged --quiet || git commit -m "Update job board hash [skip ci]"
+        git push
+    
+    - name: Send email notification on change
+      if: steps.monitor.outcome == 'failure'
+      uses: dawidd6/action-send-mail@v3
+      with:
+        server_address: smtp.gmail.com
+        server_port: 587
+        username: ${{ secrets.MAIL_USERNAME }}
+        password: ${{ secrets.MAIL_PASSWORD }}
+        subject: 🚨 New Nashville Job Posting Detected!
+        to: ${{ secrets.MAIL_TO }}
+        from: Job Board Monitor
+        body: |
+          A change has been detected on the Switchyards job board!
+          
+          Check it out here:
+          https://jobs.gusto.com/boards/switchyards-inc-53b85507-2487-42ff-87a2-196907c98839
+          
+          View the workflow run:
+          ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
